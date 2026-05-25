@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -25,7 +27,6 @@
             border-bottom: 2px solid #dc2626;
             font-weight: 700;
         }
-        /* Mengontrol penampakan fitur admin */
         .admin-only {
             display: none !important;
         }
@@ -145,6 +146,7 @@
             <div class="admin-only bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
                 <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Edit Profil</h3>
                 <form id="form-profil" onsubmit="simpanProfil(event)" class="space-y-4">
+                    <input type="hidden" id="profil-id">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Visi</label>
                         <textarea id="profil-visi" rows="2" required class="w-full text-sm px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none text-slate-700"></textarea>
@@ -164,15 +166,15 @@
             <div class="space-y-6">
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                     <h4 class="font-extrabold text-slate-900 border-l-4 border-red-600 pl-3 mb-2">VISI</h4>
-                    <p id="view-visi" class="text-sm text-slate-600 italic"></p>
+                    <p id="view-visi" class="text-sm text-slate-600 italic">Memuat visi...</p>
                 </div>
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                     <h4 class="font-extrabold text-slate-900 border-l-4 border-red-600 pl-3 mb-2">MISI</h4>
-                    <ul id="view-misi" class="list-disc list-inside text-sm text-slate-600 space-y-1"></ul>
+                    <ul id="view-misi" class="list-disc list-inside text-sm text-slate-600 space-y-1">Mengecek misi...</ul>
                 </div>
                 <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                     <h4 class="font-extrabold text-slate-900 border-l-4 border-red-600 pl-3 mb-2">STRUKTUR ORGANISASI</h4>
-                    <p id="view-struktur" class="text-sm text-slate-600 whitespace-pre-line"></p>
+                    <p id="view-struktur" class="text-sm text-slate-600 whitespace-pre-line">Memuat struktur...</p>
                 </div>
             </div>
         </section>
@@ -238,7 +240,7 @@
             </div>
 
             <div class="admin-only bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl mx-auto mb-10">
-                <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2A">Unggah Dokumentasi</h3>
+                <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Unggah Dokumentasi</h3>
                 <form id="form-dokumentasi" onsubmit="simpanDokumentasi(event)" class="space-y-4">
                     <input type="hidden" id="dok-id">
                     <div>
@@ -304,26 +306,14 @@
     </div>
 
     <script>
-        // Kredensial Validasi Tetap Sesuai Permintaan Anda
+        // === KONFIGURASI SUPABASE ===
+        // GANTI VALUE DI BAWAH INI DENGAN DATA DARI SUPABASE DASHBOARD ANDA
+        const SUPABASE_URL = 'https://GANTI_DENGAN_URL_PROYEK_ANDA.supabase.co';
+        const SUPABASE_ANON_KEY = 'GANTI_DENGAN_ANON_KEY_PROYEK_ANDA';
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         const ADMIN_CREDENTIALS = { user: "admin", pass: "admin123" };
-
-        // Database Penampung Sementara di Browser (localStorage)
-        let dbInfo = JSON.parse(localStorage.getItem('DB_PGRI_INFO_2026')) || [
-            { id: '1', judul: 'Rapat Kerja Pengurus Cabang PGRI Bakumpai', isi: 'Diberitahukan kepada seluruh jajaran pengurus harian untuk berhadir pada acara evaluasi bulanan.', tanggal: '2026-05-25' }
-        ];
-        let dbProfil = JSON.parse(localStorage.getItem('DB_PGRI_PROFIL_2026')) || { 
-            visi: 'Terwujudnya PGRI sebagai organisasi profesi terpercaya dan dinamis.', 
-            misi: 'Meningkatkan kompetensi guru, Menjalin kemitraan penjamin mutu pendidikan.', 
-            struktur: 'Ketua: Shalahuddin Al-Ayubi, M.Pd.\nSekretaris: Ahmad Fauzi, S.Pd.'
-        }; 
-        let dbKegiatan = JSON.parse(localStorage.getItem('DB_PGRI_KEGIATAN_2026')) || [
-            { id: '1', judul: 'Konferensi Kerja PGRI', kategori: 'Raker', status: 'Menunggu', tanggal: '2026-06-02', jam: '09:00', deskripsi: 'Penyusunan anggaran belanja tahunan.' }
-        ]; 
-        let dbDokumentasi = JSON.parse(localStorage.getItem('DB_PGRI_DOK_2026')) || [
-            { id: '1', judul: 'Peringatan Hari Guru Nasional', tanggal: '2025-11-25', link: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=600&q=80' }
-        ];
-
-        // Membaca status login yang tersimpan sebelumnya agar tidak hilang saat direfresh
         let currentAuthSession = localStorage.getItem('SESSION_PGRI_ADMIN') === 'true' || false;
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -331,7 +321,6 @@
             renderAll();
         });
 
-        // Kontrol Navigasi Tab
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
@@ -362,7 +351,6 @@
             }
         }
 
-        // --- SISTEM KONTROL JENDELA POP-UP LOGIN ---
         function openLoginModal() {
             document.getElementById('login-error').classList.add('hidden');
             document.getElementById('login-user').value = '';
@@ -380,14 +368,13 @@
             const passInput = document.getElementById('login-pass').value;
             const errorBox = document.getElementById('login-error');
 
-            // Pengecekan Kredensial (admin & admin123)
             if (userInput === ADMIN_CREDENTIALS.user && passInput === ADMIN_CREDENTIALS.pass) {
                 currentAuthSession = true;
                 localStorage.setItem('SESSION_PGRI_ADMIN', 'true');
                 errorBox.classList.add('hidden');
                 closeLoginModal();
                 applySessionTheme();
-                renderAll(); // Render ulang agar tombol edit & hapus langsung muncul
+                renderAll();
                 alert('Login Berhasil! Anda sekarang berada dalam Mode Admin Pengurus.');
             } else {
                 errorBox.classList.remove('hidden');
@@ -399,7 +386,7 @@
                 currentAuthSession = false;
                 localStorage.setItem('SESSION_PGRI_ADMIN', 'false');
                 applySessionTheme();
-                renderAll(); // Sembunyikan kembali tombol edit & hapus
+                renderAll();
                 switchTab('beranda');
             }
         }
@@ -421,7 +408,6 @@
                 if(btnLogout) btnLogout.classList.add('hidden');
             }
             
-            // Sesuaikan grid form layout beranda & kegiatan saat login aktif
             const activeTab = document.querySelector('.nav-link.active');
             if(activeTab) {
                 const currentTabId = activeTab.id.replace('nav-', '');
@@ -429,7 +415,6 @@
             }
         }
 
-        // --- MANAJEMEN RENDER TAMPILAN DATA & POSTINGAN ---
         function renderAll() {
             renderInformasi();
             renderProfil();
@@ -437,9 +422,17 @@
             renderDokumentasi();
         }
 
-        function renderInformasi() {
+        // --- AMBIL DATA & RENDER DARI SUPABASE ---
+
+        async function renderInformasi() {
             const container = document.getElementById('container-informasi');
             if(!container) return;
+            
+            // Fetch dari Supabase tabel 'informasi'
+            let { data: dbInfo, error } = await supabase.from('informasi').select('*').order('id', { ascending: false });
+            if (error) { console.error("Error Fetch Informasi:", error); return; }
+            
+            dbInfo = dbInfo || [];
             container.innerHTML = '';
             document.getElementById('count-info').innerText = `${dbInfo.length} Pengumuman`;
 
@@ -451,30 +444,44 @@
                         <p class="text-sm text-slate-600 mt-1 whitespace-pre-line">${info.isi}</p>
                         
                         <div class="admin-only mt-4 flex space-x-2">
-                            <button onclick="editInformasi('${info.id}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1 rounded-lg font-bold"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
+                            <button onclick="editInformasi('${info.id}', '${escapeHtml(info.judul)}', '${escapeHtml(info.isi)}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1 rounded-lg font-bold"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
                             <button onclick="hapusInformasi('${info.id}')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-1 rounded-lg font-bold"><i class="fa-solid fa-trash mr-1"></i>Hapus</button>
                         </div>
                     </div>`;
             });
         }
 
-        function renderProfil() {
-            document.getElementById('view-visi').innerText = dbProfil.visi;
-            document.getElementById('profil-visi').value = dbProfil.visi;
-            document.getElementById('profil-misi').value = dbProfil.misi;
-            document.getElementById('profil-struktur').value = dbProfil.struktur;
-            
-            const listMisi = document.getElementById('view-misi');
-            listMisi.innerHTML = '';
-            dbProfil.misi.split(',').forEach(m => {
-                if(m.trim()) listMisi.innerHTML += `<li>${m.trim()}</li>`;
-            });
-            document.getElementById('view-struktur').innerText = dbProfil.struktur;
+        async function renderProfil() {
+            // Fetch dari Supabase tabel 'profil' (ambil baris pertama)
+            let { data: profs, error } = await supabase.from('profil').select('*').limit(1);
+            if (error) { console.error("Error Fetch Profil:", error); return; }
+
+            if (profs && profs.length > 0) {
+                const data = profs[0];
+                document.getElementById('profil-id').value = data.id;
+                document.getElementById('view-visi').innerText = data.visi;
+                document.getElementById('profil-visi').value = data.visi;
+                document.getElementById('profil-misi').value = data.misi;
+                document.getElementById('profil-struktur').value = data.struktur;
+                
+                const listMisi = document.getElementById('view-misi');
+                listMisi.innerHTML = '';
+                data.misi.split(',').forEach(m => {
+                    if(m.trim()) listMisi.innerHTML += `<li>${m.trim()}</li>`;
+                });
+                document.getElementById('view-struktur').innerText = data.struktur;
+            }
         }
 
-        function renderKegiatan() {
+        async function renderKegiatan() {
             const container = document.getElementById('container-kegiatan');
             if(!container) return;
+
+            // Fetch dari Supabase tabel 'kegiatan'
+            let { data: dbKegiatan, error } = await supabase.from('kegiatan').select('*').order('tanggal', { ascending: true });
+            if (error) { console.error("Error Fetch Kegiatan:", error); return; }
+
+            dbKegiatan = dbKegiatan || [];
             container.innerHTML = '';
 
             dbKegiatan.forEach(keg => {
@@ -487,7 +494,7 @@
                             <p class="text-sm text-slate-600 mt-2">${keg.deskripsi}</p>
                             
                             <div class="admin-only mt-3 flex space-x-2">
-                                <button onclick="editKegiatan('${keg.id}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2.5 py-1 rounded-lg font-bold"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
+                                <button onclick="editKegiatan('${keg.id}', '${escapeHtml(keg.judul)}', '${escapeHtml(keg.kategori)}', '${keg.status}', '${keg.tanggal}', '${keg.jam}', '${escapeHtml(keg.deskripsi)}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2.5 py-1 rounded-lg font-bold"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
                                 <button onclick="hapusKegiatan('${keg.id}')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-2.5 py-1 rounded-lg font-bold"><i class="fa-solid fa-trash mr-1"></i>Hapus</button>
                             </div>
                         </div>
@@ -498,9 +505,15 @@
             });
         }
 
-        function renderDokumentasi() {
+        async function renderDokumentasi() {
             const container = document.getElementById('container-dokumentasi');
             if(!container) return;
+
+            // Fetch dari Supabase tabel 'dokumentasi'
+            let { data: dbDokumentasi, error } = await supabase.from('dokumentasi').select('*').order('id', { ascending: false });
+            if (error) { console.error("Error Fetch Dokumentasi:", error); return; }
+
+            dbDokumentasi = dbDokumentasi || [];
             container.innerHTML = '';
 
             dbDokumentasi.forEach(dok => {
@@ -512,7 +525,7 @@
                             <h4 class="font-bold text-slate-900 text-sm mt-1 mb-3">${dok.judul}</h4>
                             
                             <div class="admin-only flex space-x-2">
-                                <button onclick="editDokumentasi('${dok.id}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2.5 py-1 rounded-lg font-bold"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
+                                <button onclick="editDokumentasi('${dok.id}', '${escapeHtml(dok.judul)}', '${dok.tanggal}', '${escapeHtml(dok.link)}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2.5 py-1 rounded-lg font-bold"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
                                 <button onclick="hapusDokumentasi('${dok.id}')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-2.5 py-1 rounded-lg font-bold"><i class="fa-solid fa-trash mr-1"></i>Hapus</button>
                             </div>
                         </div>
@@ -520,60 +533,60 @@
             });
         }
 
-        // --- LOGIKA AKSI TAMBAH, EDIT & HAPUS DATA POSTINGAN (ADMIN ONLY) ---
 
-        // A. KONTROL POSTINGAN INFORMASI
-        function simpanInformasi(e) {
+        // --- PROSES SIMPAN / UPDATE / DELETE KE SUPABASE ---
+
+        async function simpanInformasi(e) {
             e.preventDefault();
             const id = document.getElementById('info-id').value;
             const judul = document.getElementById('info-judul').value;
             const isi = document.getElementById('info-isi').value;
             const tanggal = new Date().toISOString().split('T')[0];
 
-            if(id) { // Mode Perbarui Data (Edit)
-                dbInfo = dbInfo.map(info => info.id === id ? { id, judul, isi, tanggal } : info);
-            } else { // Mode Tambah Baru
-                dbInfo.unshift({ id: Date.now().toString(), judul, isi, tanggal });
+            if(id) {
+                await supabase.from('informasi').update({ judul, isi, tanggal }).eq('id', id);
+            } else {
+                await supabase.from('informasi').insert([{ judul, isi, tanggal }]);
             }
             
-            localStorage.setItem('DB_PGRI_INFO_2026', JSON.stringify(dbInfo));
             resetFormInfo(); 
             renderInformasi();
         }
 
-        function editInformasi(id) {
-            const data = dbInfo.find(i => i.id === id);
-            if(!data) return;
-            document.getElementById('info-id').value = data.id;
-            document.getElementById('info-judul').value = data.judul;
-            document.getElementById('info-isi').value = data.isi;
+        function editInformasi(id, judul, isi) {
+            document.getElementById('info-id').value = id;
+            document.getElementById('info-judul').value = judul;
+            document.getElementById('info-isi').value = isi;
             document.getElementById('btn-submit-info').innerText = "Perbarui Data";
         }
 
-        function hapusInformasi(id) {
+        async function hapusInformasi(id) {
             if(confirm("Apakah Anda yakin ingin menghapus pengumuman postingan ini?")) {
-                dbInfo = dbInfo.filter(i => i.id !== id);
-                localStorage.setItem('DB_PGRI_INFO_2026', JSON.stringify(dbInfo));
+                await supabase.from('informasi').delete().eq('id', id);
                 renderInformasi();
             }
         }
         function resetFormInfo() { document.getElementById('form-info').reset(); document.getElementById('info-id').value = ''; document.getElementById('btn-submit-info').innerText = "Simpan Data"; }
 
-        // B. KONTROL EDIT PROFIL
-        function simpanProfil(e) {
+
+        async function simpanProfil(e) {
             e.preventDefault();
-            dbProfil = {
-                visi: document.getElementById('profil-visi').value,
-                misi: document.getElementById('profil-misi').value,
-                struktur: document.getElementById('profil-struktur').value
-            };
-            localStorage.setItem('DB_PGRI_PROFIL_2026', JSON.stringify(dbProfil));
+            const id = document.getElementById('profil-id').value;
+            const visi = document.getElementById('profil-visi').value;
+            const misi = document.getElementById('profil-misi').value;
+            const struktur = document.getElementById('profil-struktur').value;
+
+            if (id) {
+                await supabase.from('profil').update({ visi, misi, struktur }).eq('id', id);
+            } else {
+                await supabase.from('profil').insert([{ visi, misi, struktur }]);
+            }
             renderProfil(); 
             alert('Profil organisasi berhasil diperbarui!');
         }
 
-        // C. KONTROL POSTINGAN KEGIATAN
-        function simpanKegiatan(e) {
+
+        async function simpanKegiatan(e) {
             e.preventDefault();
             const id = document.getElementById('kegiatan-id').value;
             const judul = document.getElementById('kegiatan-judul').value;
@@ -584,40 +597,36 @@
             const deskripsi = document.getElementById('kegiatan-deskripsi').value;
 
             if(id) {
-                dbKegiatan = dbKegiatan.map(k => k.id === id ? { id, judul, kategori, status, tanggal, jam, deskripsi } : k);
+                await supabase.from('kegiatan').update({ judul, kategori, status, tanggal, jam, deskripsi }).eq('id', id);
             } else {
-                dbKegiatan.unshift({ id: Date.now().toString(), judul, kategori, status, tanggal, jam, deskripsi });
+                await supabase.from('kegiatan').insert([{ judul, kategori, status, tanggal, jam, deskripsi }]);
             }
 
-            localStorage.setItem('DB_PGRI_KEGIATAN_2026', JSON.stringify(dbKegiatan));
             resetFormKegiatan();
             renderKegiatan();
         }
 
-        function editKegiatan(id) {
-            const data = dbKegiatan.find(k => k.id === id);
-            if(!data) return;
-            document.getElementById('kegiatan-id').value = data.id;
-            document.getElementById('kegiatan-judul').value = data.judul;
-            document.getElementById('kegiatan-kategori').value = data.kategori;
-            document.getElementById('kegiatan-status').value = data.status;
-            document.getElementById('kegiatan-tanggal').value = data.tanggal;
-            document.getElementById('kegiatan-jam').value = data.jam;
-            document.getElementById('kegiatan-deskripsi').value = data.deskripsi;
+        function editKegiatan(id, judul, kategori, status, tanggal, jam, deskripsi) {
+            document.getElementById('kegiatan-id').value = id;
+            document.getElementById('kegiatan-judul').value = judul;
+            document.getElementById('kegiatan-kategori').value = kategori;
+            document.getElementById('kegiatan-status').value = status;
+            document.getElementById('kegiatan-tanggal').value = tanggal;
+            document.getElementById('kegiatan-jam').value = jam;
+            document.getElementById('kegiatan-deskripsi').value = deskripsi;
             document.getElementById('btn-submit-kegiatan').innerText = "Perbarui Kegiatan";
         }
 
-        function hapusKegiatan(id) {
+        async function hapusKegiatan(id) {
             if(confirm("Apakah Anda yakin ingin menghapus agenda kegiatan ini?")) {
-                dbKegiatan = dbKegiatan.filter(k => k.id !== id);
-                localStorage.setItem('DB_PGRI_KEGIATAN_2026', JSON.stringify(dbKegiatan));
+                await supabase.from('kegiatan').delete().eq('id', id);
                 renderKegiatan();
             }
         }
         function resetFormKegiatan() { document.getElementById('form-kegiatan').reset(); document.getElementById('kegiatan-id').value = ''; document.getElementById('btn-submit-kegiatan').innerText = "Simpan"; }
 
-        // D. KONTROL POSTINGAN DOKUMENTASI
-        function simpanDokumentasi(e) {
+
+        async function simpanDokumentasi(e) {
             e.preventDefault();
             const id = document.getElementById('dok-id').value;
             const judul = document.getElementById('dok-judul').value;
@@ -625,34 +634,40 @@
             const link = document.getElementById('dok-link').value;
 
             if(id) {
-                dbDokumentasi = dbDokumentasi.map(d => d.id === id ? { id, judul, tanggal, link } : d);
+                await supabase.from('dokumentasi').update({ judul, tanggal, link }).eq('id', id);
             } else {
-                dbDokumentasi.unshift({ id: Date.now().toString(), judul, tanggal, link });
+                await supabase.from('dokumentasi').insert([{ judul, tanggal, link }]);
             }
 
-            localStorage.setItem('DB_PGRI_DOK_2026', JSON.stringify(dbDokumentasi));
             resetFormDokumentasi();
             renderDokumentasi();
         }
 
-        function editDokumentasi(id) {
-            const data = dbDokumentasi.find(d => d.id === id);
-            if(!data) return;
-            document.getElementById('dok-id').value = data.id;
-            document.getElementById('dok-judul').value = data.judul;
-            document.getElementById('dok-tanggal').value = data.tanggal;
-            document.getElementById('dok-link').value = data.link;
+        function editDokumentasi(id, judul, tanggal, link) {
+            document.getElementById('dok-id').value = id;
+            document.getElementById('dok-judul').value = judul;
+            document.getElementById('dok-tanggal').value = tanggal;
+            document.getElementById('dok-link').value = link;
             document.getElementById('btn-submit-dok').innerText = "Perbarui Foto";
         }
 
-        function hapusDokumentasi(id) {
+        async function hapusDokumentasi(id) {
             if(confirm("Apakah Anda yakin ingin menghapus berkas foto dokumentasi ini?")) {
-                dbDokumentasi = dbDokumentasi.filter(d => d.id !== id);
-                localStorage.setItem('DB_PGRI_DOK_2026', JSON.stringify(dbDokumentasi));
+                await supabase.from('dokumentasi').delete().eq('id', id);
                 renderDokumentasi();
             }
         }
         function resetFormDokumentasi() { document.getElementById('form-dokumentasi').reset(); document.getElementById('dok-id').value = ''; document.getElementById('btn-submit-dok').innerText = "Publikasikan Foto"; }
+
+        // Fungsi pembantu untuk mencegah bug tanda kutip pada tombol onclick HTML
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
     </script>
 </body>
 </html>
