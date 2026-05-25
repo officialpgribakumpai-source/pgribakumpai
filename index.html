@@ -516,23 +516,24 @@
             });
         }
 
-        function simpanInformasi(e) {
-            e.preventDefault();
-            const id = document.getElementById('info-id').value;
-            const judul = document.getElementById('info-judul').value;
-            const isi = document.getElementById('info-isi').value;
-            const tgl = new Date().toISOString().split('T')[0];
+        async function simpanInformasi(e) {
+    e.preventDefault();
+    const id = document.getElementById('info-id').value;
+    const judul = document.getElementById('info-judul').value;
+    const isi = document.getElementById('info-isi').value;
+    const tanggal = new Date().toISOString().split('T')[0];
 
-            if(id) {
-                const index = dbInfo.findIndex(i => i.id === id);
-                dbInfo[index] = { id, judul, isi, tanggal: tgl };
-            } else {
-                dbInfo.unshift({ id: 'INF-' + Date.now(), judul, isi, tanggal: tgl });
-            }
-            localStorage.setItem('DB_PGRI_INFO', JSON.stringify(dbInfo));
-            resetFormInfo();
-            renderInformasi();
-        }
+    if(id) {
+        // Mengupdate ke database internet Supabase
+        await _db.from('informasi').update({ judul, isi, tanggal }).eq('id', id);
+    } else {
+        // Memasukkan data baru ke internet Supabase
+        await _db.from('informasi').insert([{ judul, isi, tanggal }]);
+    }
+    
+    resetFormInfo(); 
+    renderInformasi(); // Menampilkan ulang data terbaru dari Supabase
+}
 
         function editInfo(id) {
             const data = dbInfo.find(i => i.id === id);
@@ -637,26 +638,25 @@
             });
         }
 
-        function simpanKegiatan(e) {
-            e.preventDefault();
-            const id = document.getElementById('kegiatan-id').value;
-            const judul = document.getElementById('kegiatan-judul').value;
-            const kategori = document.getElementById('kegiatan-kategori').value;
-            const status = document.getElementById('kegiatan-status').value;
-            const tanggal = document.getElementById('kegiatan-tanggal').value;
-            const jam = document.getElementById('kegiatan-jam').value;
-            const deskripsi = document.getElementById('kegiatan-deskripsi').value;
+        async function simpanKegiatan(e) {
+    e.preventDefault();
+    const id = document.getElementById('kegiatan-id').value;
+    const judul = document.getElementById('kegiatan-judul').value;
+    const kategori = document.getElementById('kegiatan-kategori').value;
+    const status = document.getElementById('kegiatan-status').value;
+    const tanggal = document.getElementById('kegiatan-tanggal').value;
+    const jam = document.getElementById('kegiatan-jam').value;
+    const deskripsi = document.getElementById('kegiatan-deskripsi').value;
 
-            if(id) {
-                const index = dbKegiatan.findIndex(k => k.id === id);
-                dbKegiatan[index] = { id, judul, kategori, status, tanggal, jam, deskripsi };
-            } else {
-                dbKegiatan.unshift({ id: 'KEG-' + Date.now(), judul, kategori, status, tanggal, jam, deskripsi });
-            }
-            localStorage.setItem('DB_PGRI_KEGIATAN', JSON.stringify(dbKegiatan));
-            resetFormKegiatan();
-            renderKegiatan();
-        }
+    if(id) {
+        await _db.from('kegiatan').update({ judul, kategori, status, tanggal, jam, deskripsi }).eq('id', id);
+    } else {
+        await _db.from('kegiatan').insert([{ judul, kategori, status, tanggal, jam, deskripsi }]);
+    }
+
+    resetFormKegiatan();
+    renderKegiatan();
+}
 
         function editKegiatan(id) {
             const data = dbKegiatan.find(k => k.id === id);
@@ -710,23 +710,22 @@
             });
         }
 
-        function simpanDokumentasi(e) {
-            e.preventDefault();
-            const id = document.getElementById('dok-id').value;
-            const judul = document.getElementById('dok-judul').value;
-            const tanggal = document.getElementById('dok-tanggal').value;
-            const link = document.getElementById('dok-link').value;
+        async function simpanDokumentasi(e) {
+    e.preventDefault();
+    const id = document.getElementById('dok-id').value;
+    const judul = document.getElementById('dok-judul').value;
+    const tanggal = document.getElementById('dok-tanggal').value;
+    const link = document.getElementById('dok-link').value;
 
-            if(id) {
-                const index = dbDokumentasi.findIndex(d => d.id === id);
-                dbDokumentasi[index] = { id, judul, tanggal, link };
-            } else {
-                dbDokumentasi.unshift({ id: 'DOK-' + Date.now(), judul, tanggal, link });
-            }
-            localStorage.setItem('DB_PGRI_DOK', JSON.stringify(dbDokumentasi));
-            resetFormDokumentasi();
-            renderDokumentasi();
-        }
+    if(id) {
+        await _db.from('dokumentasi').update({ judul, tanggal, link }).eq('id', id);
+    } else {
+        await _db.from('dokumentasi').insert([{ judul, tanggal, link }]);
+    }
+
+    resetFormDokumentasi();
+    renderDokumentasi();
+}
 
         function editDokumentasi(id) {
             const data = dbDokumentasi.find(d => d.id === id);
