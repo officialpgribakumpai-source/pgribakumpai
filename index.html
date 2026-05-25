@@ -453,25 +453,45 @@
 
         async function renderProfil() {
             // Fetch dari Supabase tabel 'profil' (ambil baris pertama)
-            let { data: profs, error } = await supabase.from('profil').select('*').limit(1);
-            if (error) { console.error("Error Fetch Profil:", error); return; }
+            lasync function renderProfil() {
+    try {
+        // Fetch dari Supabase tabel 'profil' (ambil baris pertama)
+        let { data: profs, error } = await supabase.from('profil').select('*').limit(1);
+        if (error) { console.error("Error Fetch Profil:", error); return; }
 
-            if (profs && profs.length > 0) {
-                const data = profs[0];
-                document.getElementById('profil-id').value = data.id;
-                document.getElementById('view-visi').innerText = data.visi;
-                document.getElementById('profil-visi').value = data.visi;
-                document.getElementById('profil-misi').value = data.misi;
-                document.getElementById('profil-struktur').value = data.struktur;
-                
-                const listMisi = document.getElementById('view-misi');
-                listMisi.innerHTML = '';
+        if (profs && profs.length > 0) {
+            const data = profs[0];
+            
+            // Menggunakan pengecekan elemen (if) agar tidak menyebabkan error crash jika ID tidak ada
+            const inputId = document.getElementById('profil-id');
+            const inputVisi = document.getElementById('profil-visi');
+            const inputMisi = document.getElementById('profil-misi');
+            const inputStruktur = document.getElementById('profil-struktur');
+            
+            if(inputId) inputId.value = data.id;
+            if(inputVisi) inputVisi.value = data.visi;
+            if(inputMisi) inputMisi.value = data.misi;
+            if(inputStruktur) inputStruktur.value = data.struktur;
+            
+            // Render tampilan untuk pengunjung umum
+            const viewVisi = document.getElementById('view-visi');
+            const viewMisi = document.getElementById('view-misi');
+            const viewStruktur = document.getElementById('view-struktur');
+
+            if(viewVisi) viewVisi.innerText = data.visi;
+            if(viewStruktur) viewStruktur.innerText = data.struktur;
+            
+            if(viewMisi) {
+                viewMisi.innerHTML = '';
                 data.misi.split(',').forEach(m => {
-                    if(m.trim()) listMisi.innerHTML += `<li>${m.trim()}</li>`;
+                    if(m.trim()) viewMisi.innerHTML += `<li>${m.trim()}</li>`;
                 });
-                document.getElementById('view-struktur').innerText = data.struktur;
             }
         }
+    } catch (err) {
+        console.error("Gagal memuat data profil:", err);
+    }
+}
 
         async function renderKegiatan() {
             const container = document.getElementById('container-kegiatan');
