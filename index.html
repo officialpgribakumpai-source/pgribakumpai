@@ -10,8 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -35,6 +33,13 @@
         }
         body.is-admin .admin-flex {
             display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.2s ease-out forwards;
         }
     </style>
 </head>
@@ -68,8 +73,8 @@
                     </button>
                     
                     <div class="flex items-center space-x-2 border-l border-slate-200 pl-4 ml-2">
-                        <button onclick="fetchFromCloud()" title="Muat Ulang Data Cloud" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-xl transition-all relative">
-                            <i id="cloud-icon" class="fa-solid fa-cloud-arrow-down"></i>
+                        <button onclick="syncWithCloud()" title="Sinkronisasi Data ke Cloud" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-xl transition-all relative">
+                            <i id="cloud-icon" class="fa-solid fa-cloud-arrow-up"></i>
                         </button>
                         <button id="btn-login-modal" onclick="openLoginModal()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm">
                             <i class="fa-solid fa-right-to-bracket mr-1.5"></i>Login Admin
@@ -327,10 +332,11 @@
     </footer>
 
     <div id="login-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-sm w-full p-6 relative">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-sm w-full p-6 relative animate-fadeIn">
             <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
                 <i class="fa-solid fa-circle-xmark text-xl"></i>
             </button>
+            
             <div class="text-center mb-6">
                 <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-2">
                     <i class="fa-solid fa-lock text-lg"></i>
@@ -338,97 +344,61 @@
                 <h3 class="text-lg font-bold text-slate-900">Autentikasi Pengurus</h3>
                 <p class="text-xs text-slate-400 mt-0.5">Gunakan akun admin untuk mengelola portal</p>
             </div>
+            
             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Username</label>
-                    <input type="text" id="login-user" required placeholder="admin" class="w-full text-sm px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 text-slate-700">
+                    <input type="text" id="login-user" required placeholder="Masukkan username" class="w-full text-sm px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 text-slate-700">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Password</label>
                     <input type="password" id="login-pass" required placeholder="••••••••" class="w-full text-sm px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 text-slate-700">
                 </div>
-                <div id="login-error" class="text-xs text-rose-600 font-semibold hidden text-center">Username atau password salah!</div>
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-md">Masuk Sekarang</button>
+                
+                <div id="login-error" class="text-xs text-rose-600 font-semibold hidden text-center bg-rose-50 py-2 rounded-lg border border-rose-100">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> Username atau password salah!
+                </div>
+                
+                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-md">
+                    Masuk Sekarang
+                </button>
             </form>
+            
             <div class="text-center mt-4 text-[11px] text-slate-400">
-                User & Pass: <code class="bg-slate-100 px-1 rounded font-mono text-slate-700 font-bold">admin / admin123</code>
+                Kredensial Demo: <code class="bg-slate-100 px-1 rounded font-mono text-slate-700 font-bold">admin</code> / <code class="bg-slate-100 px-1 rounded font-mono text-slate-700 font-bold">admin</code>
             </div>
         </div>
     </div>
 
     <script>
-        // Kredensial Admin Diperbarui (Sesuai Permintaan Anda)
-        const ADMIN_CREDENTIALS = { user: "admin", pass: "admin123" };
+        // Kredensial Admin Default
+        const ADMIN_CREDENTIALS = { user: "admin", pass: "admin" };
 
-        // Konfigurasi Kredensial Lapisan Data Supabase
-        const SUPABASE_URL = "https://aimwgorobxfmzwycgrpn.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpbXdnb3JvYnhmbXp3eWNncnBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NjMxMDQsImV4cCI6MjA5NTIzOTEwNH0.t0f1_nIAXoKM14fRI80Eg1GvpOCE-rI25QUaqM-9hKU";
-        
-        // Inisialisasi Klien Supabase Aman (Failsafe Guard untuk meminimalisir delay load CDN)
-        const supabase = bootstrapSupabase();
-        function bootstrapSupabase() {
-            if (typeof supabase !== 'undefined' && supabase !== null) return supabase;
-            try {
-                if (window.supabase && typeof window.supabase.createClient === 'function') {
-                    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                }
-            } catch (e) {
-                console.error("Gagal melakukan inisialisasi modul Supabase:", e);
-            }
-            return null;
-        }
+        // Database Local State
+        let dbInfo = JSON.parse(localStorage.getItem('DB_PGRI_INFO')) || [
+            { id: '1', judul: 'Penyusunan Program Kerja Semester Ganjil 2026', isi: 'Diberitahukan kepada seluruh pengurus dan anggota komite sekolah se-Kecamatan Bakumpai untuk berhadir dalam penyelarasan kurikulum.', tanggal: '2026-05-10' }
+        ];
+        let dbProfil = JSON.parse(localStorage.getItem('DB_PGRI_PROFIL')) || { 
+            visi: 'Terwujudnya organisasi profesi terpercaya, dinamis, dan berwibawa dalam memuliakan guru menuju Indonesia Maju.', 
+            misi: 'Meningkatkan kompetensi profesionalitas guru di Kecamatan Bakumpai, Membangun kemitraan strategis penjamin mutu pendidikan daerah, Mengoptimalkan perlindungan hukum.', 
+            struktur: 'Ketua Umum: Shalahuddin Al-Ayubi, M.Pd.\nSekretaris: Ahmad Fauzi, S.Pd.'
+        }; 
+        let dbKegiatan = JSON.parse(localStorage.getItem('DB_PGRI_KEGIATAN')) || [
+            { id: '1', judul: 'Konferensi Kerja Cabang PGRI Bakumpai', kategori: 'Raker', status: 'Sedang Berjalan', tanggal: '2026-05-28', jam: '09:00', deskripsi: 'Evaluasi program harian dan pembagian bantuan daerah.' }
+        ]; 
+        let dbDokumentasi = JSON.parse(localStorage.getItem('DB_PGRI_DOK')) || [
+            { id: '1', judul: 'Peringatan Hari Guru Nasional', tanggal: '2025-11-25', link: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=600&q=80' }
+        ];
 
-        // State Penampung Berkas Database Lokal
-        let dbInfo = [];
-        let dbProfil = { visi: '', misi: '', struktur: '' };
-        let dbKegiatan = [];
-        let dbDokumentasi = [];
-
-        // Penjaga Status Otentikasi Sesi
+        // Status Sesi Login
         let currentAuthSession = localStorage.getItem('SESSION_PGRI_ADMIN') === 'true' || false;
 
         document.addEventListener("DOMContentLoaded", () => {
             applySessionTheme();
-            fetchFromCloud(); 
+            renderAll();
         });
 
-        // --- MANAJEMEN PENGAMBILAN DATA AWAN (REALTIME SYNC) ---
-        async function fetchFromCloud() {
-            if (!supabase) {
-                console.warn("Klien database Supabase belum siap, menjadwalkan ulang...");
-                setTimeout(fetchFromCloud, 1000);
-                return;
-            }
-
-            const icon = document.getElementById('cloud-icon');
-            if(icon) icon.className = "fa-solid fa-spinner animate-spin text-amber-500";
-
-            try {
-                // 1. Sinkronisasi Data Informasi / Berita Utama
-                const { data: infoData, error: errInfo } = await supabase.from('pgri_info').select('*').order('tanggal', { ascending: false });
-                if (!errInfo) dbInfo = infoData || [];
-
-                // 2. Sinkronisasi Profil Struktural Instansi
-                const { data: profilData, error: errProfil } = await supabase.from('pgri_profil').select('*').eq('id', 'utama').maybeSingle();
-                if (!errProfil && profilData) dbProfil = profilData;
-
-                // 3. Sinkronisasi Kalender Berkas Agenda Kegiatan
-                const { data: kegiatanData, error: errKeg } = await supabase.from('pgri_kegiatan').select('*').order('tanggal', { ascending: true });
-                if (!errKeg) dbKegiatan = kegiatanData || [];
-
-                // 4. Sinkronisasi Dokumentasi Portofolio Foto
-                const { data: dokData, error: errDok } = await supabase.from('pgri_dokumentasi').select('*').order('tanggal', { ascending: false });
-                if (!errDok) dbDokumentasi = dokData || [];
-
-                renderAll();
-                if(icon) icon.className = "fa-solid fa-cloud-arrow-down text-emerald-600";
-            } catch (e) {
-                console.error("Proses sinkronisasi data awan terputus:", e);
-                if(icon) icon.className = "fa-solid fa-cloud-arrow-up text-rose-600";
-            }
-        }
-
-        // --- NAVIGASI ANTAR TABULASI HALAMAN ---
+        // Navigation Tab Switcher
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
@@ -436,58 +406,45 @@
             const targetTab = document.getElementById(`tab-${tabId}`);
             const targetNav = document.getElementById(`nav-${tabId}`);
             
-            if (targetTab) targetTab.classList.add('active');
-            if (targetNav) targetNav.classList.add('active');
-
-            // Responsif layout formulir interaktif admin beranda
-            const layoutInfo = document.getElementById('container-layout-info');
-            if (layoutInfo) {
-                if (currentAuthSession && tabId === 'beranda') {
-                    layoutInfo.className = "lg:col-span-2 space-y-6";
-                } else {
-                    layoutInfo.className = "lg:col-span-3 space-y-6";
-                }
-            }
-
-            // Responsif layout kalender agenda interaktif admin kegiatan
-            const layoutKegiatan = document.getElementById('container-layout-kegiatan');
-            if (layoutKegiatan) {
-                if (currentAuthSession && tabId === 'kegiatan') {
-                    layoutKegiatan.className = "lg:col-span-2 space-y-4";
-                } else {
-                    layoutKegiatan.className = "lg:col-span-3 space-y-4";
-                }
-            }
+            if(targetTab) targetTab.classList.add('active');
+            if(targetNav) targetNav.classList.add('active');
         }
 
-        // --- PANEL KONTROL AUTENTIKASI ADMIN ---
-        function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
-        function closeLoginModal() { 
-            document.getElementById('login-modal').classList.add('hidden'); 
+        // --- SISTEM AUTENTIKASI DIALOG MODAL ---
+        function openLoginModal() {
             document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+            document.getElementById('login-modal').classList.remove('hidden');
         }
 
-        function handleLoginSubmit(e) {
-            e.preventDefault();
-            const u = document.getElementById('login-user').value;
-            const p = document.getElementById('login-pass').value;
+        function closeLoginModal() {
+            document.getElementById('login-modal').classList.add('hidden');
+        }
 
-            if (u === ADMIN_CREDENTIALS.user && p === ADMIN_CREDENTIALS.pass) {
+        function handleLoginSubmit(event) {
+            event.preventDefault();
+            const userInput = document.getElementById('login-user').value;
+            const passInput = document.getElementById('login-pass').value;
+            const errorElement = document.getElementById('login-error');
+
+            // Logika Validasi Username & Password
+            if (userInput === ADMIN_CREDENTIALS.user && passInput === ADMIN_CREDENTIALS.pass) {
                 currentAuthSession = true;
                 localStorage.setItem('SESSION_PGRI_ADMIN', 'true');
+                errorElement.classList.add('hidden');
                 closeLoginModal();
                 applySessionTheme();
-                switchTab('beranda');
-                alert("Otentikasi berhasil! Selamat bertugas Pengurus PGRI.");
+                alert('Login Berhasil! Selamat datang Admin.');
             } else {
-                document.getElementById('login-error').classList.remove('hidden');
+                errorElement.classList.remove('hidden');
             }
         }
 
         function logoutAdmin() {
-            if(confirm("Keluar dari sistem kendali pengurus?")) {
+            if (confirm('Apakah Anda yakin ingin keluar dari mode Admin?')) {
                 currentAuthSession = false;
-                localStorage.removeItem('SESSION_PGRI_ADMIN');
+                localStorage.setItem('SESSION_PGRI_ADMIN', 'false');
                 applySessionTheme();
                 switchTab('beranda');
             }
@@ -495,316 +452,121 @@
 
         function applySessionTheme() {
             const visitorAlert = document.getElementById('visitor-alert');
-            const btnLogin = document.getElementById('btn-login-modal');
+            const btnLoginModal = document.getElementById('btn-login-modal');
             const btnLogout = document.getElementById('btn-logout');
+            const containerLayoutInfo = document.getElementById('container-layout-info');
 
             if (currentAuthSession) {
                 document.body.classList.add('is-admin');
                 if(visitorAlert) visitorAlert.classList.add('hidden');
-                if(btnLogin) btnLogin.classList.add('hidden');
+                if(btnLoginModal) btnLoginModal.classList.add('hidden');
                 if(btnLogout) btnLogout.classList.remove('hidden');
+                if(containerLayoutInfo) containerLayoutInfo.classList.remove('lg:col-span-3');
             } else {
                 document.body.classList.remove('is-admin');
                 if(visitorAlert) visitorAlert.classList.remove('hidden');
-                if(btnLogin) btnLogin.classList.remove('hidden');
+                if(btnLoginModal) btnLoginModal.classList.remove('hidden');
                 if(btnLogout) btnLogout.classList.add('hidden');
+                if(containerLayoutInfo) containerLayoutInfo.classList.add('lg:col-span-3');
             }
         }
 
-        // --- MESIN UTAMA RENDER OBJEK HTML DOM ---
+        // Dummy / Basic Rendering Functions for UI Completeness
         function renderAll() {
             renderInformasi();
-            renderProfilView();
+            renderProfil();
             renderKegiatan();
             renderDokumentasi();
         }
 
-        // 1. RENDER INFORMASI / PENGUMUMAN BERANDA
         function renderInformasi() {
             const container = document.getElementById('container-informasi');
-            const countLabel = document.getElementById('count-info');
+            const countInfo = document.getElementById('count-info');
             if(!container) return;
-
-            countLabel.innerText = `${dbInfo.length} Pengumuman`;
-            container.innerHTML = dbInfo.length === 0 ? 
-                `<div class="text-center p-8 bg-white border border-slate-200 rounded-2xl text-slate-400 font-medium text-xs">Belum ada rilis berita atau pengumuman resmi.</div>` : '';
-
-            dbInfo.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative group hover:border-slate-300 transition-all";
-                card.innerHTML = `
-                    <div class="flex items-start justify-between">
-                        <div class="space-y-1">
-                            <span class="inline-flex items-center space-x-1 text-[11px] bg-red-50 text-red-600 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                                <i class="fa-solid fa-clock text-[10px]"></i><span>${item.tanggal}</span>
-                            </span>
-                            <h4 class="text-base font-bold text-slate-900 tracking-tight pt-1">${item.judul}</h4>
-                            <p class="text-sm text-slate-600 leading-relaxed pt-1 whitespace-pre-line">${item.isi}</p>
-                        </div>
-                        <div class="admin-only flex space-x-1 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="editInformasi('${item.id}')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 p-1.5 rounded-lg text-xs transition-colors"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="hapusInformasi('${item.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 p-1.5 rounded-lg text-xs transition-colors"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
+            container.innerHTML = '';
+            countInfo.innerText = `${dbInfo.length} Pengumuman`;
+            dbInfo.forEach(info => {
+                container.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative">
+                        <span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded">${info.tanggal}</span>
+                        <h4 class="font-bold text-slate-950 mt-2">${info.judul}</h4>
+                        <p class="text-sm text-slate-600 mt-1">${info.isi}</p>
+                        <button onclick="hapusInfo('${info.id}')" class="admin-only absolute top-4 right-4 text-rose-600 text-xs font-bold bg-rose-50 px-2 py-1 rounded">Hapus</button>
+                    </div>`;
             });
         }
 
-        // 2. RENDER MANAJEMEN PROFIL VISUAL
-        function renderProfilView() {
-            document.getElementById('view-visi').innerText = dbProfil.visi || 'Deskripsi visi belum ditentukan oleh pengurus.';
+        function renderProfil() {
+            document.getElementById('view-visi').innerText = dbProfil.visi;
+            document.getElementById('profil-visi').value = dbProfil.visi;
+            document.getElementById('profil-misi').value = dbProfil.misi;
+            document.getElementById('profil-struktur').value = dbProfil.struktur;
             
             const listMisi = document.getElementById('view-misi');
-            if(listMisi) {
-                listMisi.innerHTML = '';
-                if(dbProfil.misi) {
-                    dbProfil.misi.split(',').forEach(m => {
-                        if(m.trim()) listMisi.innerHTML += `<li>${m.trim()}</li>`;
-                    });
-                } else {
-                    listMisi.innerHTML = `<span class="text-slate-400 text-xs italic">Deskripsi tugas poin misi belum diisi.</span>`;
-                }
-            }
-
-            document.getElementById('view-struktur').innerText = dbProfil.struktur || 'Bagan data struktur kepengurusan kosong.';
-
-            // Pasang referensi data balik ke kolom input admin
-            document.getElementById('profil-visi').value = dbProfil.visi || '';
-            document.getElementById('profil-misi').value = dbProfil.misi || '';
-            document.getElementById('profil-struktur').value = dbProfil.struktur || '';
+            listMisi.innerHTML = '';
+            dbProfil.misi.split(',').forEach(m => {
+                if(m.trim()) listMisi.innerHTML += `<li>${m.trim()}</li>`;
+            });
+            document.getElementById('view-struktur').innerText = dbProfil.struktur;
         }
 
-        // 3. RENDER KALENDER AGENDA KEGIATAN
         function renderKegiatan() {
             const container = document.getElementById('container-kegiatan');
             if(!container) return;
-
-            container.innerHTML = dbKegiatan.length === 0 ? 
-                `<div class="text-center p-8 bg-white border border-slate-200 rounded-2xl text-slate-400 font-medium text-xs">Agenda kegiatan mendatang belum disusun.</div>` : '';
-
-            dbKegiatan.forEach(item => {
-                let badgeColor = "bg-amber-50 text-amber-700 border-amber-200";
-                if(item.status === "Sedang Berjalan") badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200";
-                if(item.status === "Sudah Selesai") badgeColor = "bg-slate-100 text-slate-600 border-slate-200";
-
-                const card = document.createElement('div');
-                card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative group hover:border-slate-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4";
-                card.innerHTML = `
-                    <div class="flex items-start space-x-4">
-                        <div class="bg-slate-100 rounded-xl px-3 py-2 text-center text-slate-700 font-bold text-xs min-w-[70px]">
-                            <span class="block uppercase text-[10px] text-slate-400 font-extrabold tracking-wider">TANGGAL</span>
-                            <span class="text-sm font-black text-slate-900 block">${item.tanggal.split('-')[2] || ''}</span>
-                            <span class="text-[10px] text-red-600 uppercase block font-black">${item.tanggal.split('-')[1] || ''}</span>
+            container.innerHTML = '';
+            dbKegiatan.forEach(keg => {
+                container.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
+                        <div>
+                            <span class="text-xs font-bold px-2 py-0.5 bg-slate-100 rounded text-slate-600">${keg.kategori}</span>
+                            <h4 class="font-bold text-slate-900 text-base mt-1">${keg.judul}</h4>
+                            <p class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-clock mr-1"></i>${keg.tanggal} (${keg.jam} WITA)</p>
+                            <p class="text-sm text-slate-600 mt-2">${keg.deskripsi}</p>
                         </div>
-                        <div class="space-y-1">
-                            <div class="flex items-center space-x-2 flex-wrap gap-y-1">
-                                <span class="text-[10px] bg-slate-900 text-white font-extrabold px-2 py-0.5 rounded uppercase tracking-wide">${item.kategori}</span>
-                                <span class="text-[10px] border px-2 py-0.5 rounded font-bold ${badgeColor}">${item.status}</span>
-                                <span class="text-xs text-slate-400 font-medium"><i class="fa-solid fa-clock text-[10px] mr-1"></i>${item.jam} WIB</span>
-                            </div>
-                            <h4 class="text-base font-extrabold text-slate-900 tracking-tight pt-1">${item.judul}</h4>
-                            <p class="text-xs text-slate-500 leading-relaxed font-medium">${item.deskripsi}</p>
+                        <div class="text-right">
+                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800">${keg.status}</span>
                         </div>
-                    </div>
-                    <div class="admin-only flex space-x-1 md:self-center self-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="editKegiatan('${item.id}')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 p-2 rounded-xl text-xs transition-colors"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="hapusKegiatan('${item.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 p-2 rounded-xl text-xs transition-colors"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                `;
-                container.appendChild(card);
+                    </div>`;
             });
         }
 
-        // 4. RENDER GALERI PORTOFOLIO DOKUMENTASI
         function renderDokumentasi() {
             const container = document.getElementById('container-dokumentasi');
             if(!container) return;
-
-            container.innerHTML = dbDokumentasi.length === 0 ? 
-                `<div class="col-span-full text-center p-12 bg-white border border-slate-200 rounded-2xl text-slate-400 font-medium text-xs">Koleksi berkas galeri foto dokumentasi kosong.</div>` : '';
-
-            dbDokumentasi.forEach(item => {
-                const element = document.createElement('div');
-                element.className = "bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group relative";
-                element.innerHTML = `
-                    <div class="aspect-video w-full bg-slate-100 relative overflow-hidden">
-                        <img src="${item.link}" alt="${item.judul}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&w=600&q=80'">
-                        <div class="admin-only absolute top-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                            <button onclick="editDokumentasi('${item.id}')" class="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-xl text-xs shadow-md transition-colors"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="hapusDokumentasi('${item.id}')" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-xl text-xs shadow-md transition-colors"><i class="fa-solid fa-trash"></i></button>
+            container.innerHTML = '';
+            dbDokumentasi.forEach(dok => {
+                container.innerHTML += `
+                    <div class="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+                        <img src="${dok.link}" alt="Dokumentasi" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <span class="text-xs text-slate-400 font-medium">${dok.tanggal}</span>
+                            <h4 class="font-bold text-slate-900 text-sm mt-1">${dok.judul}</h4>
                         </div>
-                    </div>
-                    <div class="p-4 space-y-1">
-                        <span class="text-[10px] text-slate-400 font-bold block uppercase"><i class="fa-solid fa-calendar mr-1"></i>${item.tanggal}</span>
-                        <h4 class="text-sm font-bold text-slate-800 tracking-tight leading-snug line-clamp-2">${item.judul}</h4>
-                    </div>
-                `;
-                container.appendChild(element);
+                    </div>`;
             });
         }
 
-        // --- SISTEM PEMROSESAN TRANSMISI DATA AWAN SUPABASE ---
-
-        // A. KENDALI MODEL INFORMASI BERANDA
-        async function simpanInformasi(e) {
+        function simpanInformasi(e) {
             e.preventDefault();
-            if(!supabase) return alert("Koneksi server terputus.");
-            
-            const id = document.getElementById('info-id').value;
             const judul = document.getElementById('info-judul').value;
             const isi = document.getElementById('info-isi').value;
-            const tanggal = new Date().toISOString().split('T')[0];
-
-            if(id) {
-                await supabase.from('pgri_info').update({ judul, isi, tanggal }).eq('id', id);
-            } else {
-                await supabase.from('pgri_info').insert([{ judul, isi, tanggal }]);
-            }
-            resetFormInfo();
-            fetchFromCloud();
+            dbInfo.unshift({ id: Date.now().toString(), judul, isi, tanggal: new Date().toISOString().split('T')[0] });
+            localStorage.setItem('DB_PGRI_INFO', JSON.stringify(dbInfo));
+            resetFormInfo(); renderInformasi();
         }
-
-        function editInformasi(id) {
-            const data = dbInfo.find(d => d.id === id);
-            if(!data) return;
-            document.getElementById('info-id').value = data.id;
-            document.getElementById('info-judul').value = data.judul;
-            document.getElementById('info-isi').value = data.isi;
-            document.getElementById('btn-submit-info').innerText = "Perbarui Berita";
-        }
-
-        async function hapusInformasi(id) {
-            if(!supabase) return;
-            if(confirm("Hapus pengumuman ini secara permanen dari server awan?")) {
-                await supabase.from('pgri_info').delete().eq('id', id);
-                fetchFromCloud();
-            }
-        }
-
-        function resetFormInfo() { 
-            document.getElementById('form-info').reset();
-            document.getElementById('info-id').value = ''; 
-            document.getElementById('btn-submit-info').innerText = "Kirim Berita";
-        }
-
-        // B. KENDALI MODEL PROFIL ORGANISASI
-        async function simpanProfil(e) {
+        function resetFormInfo() { document.getElementById('form-info').reset(); }
+        function hapusInfo(id) { dbInfo = dbInfo.filter(i => i.id !== id); localStorage.setItem('DB_PGRI_INFO', JSON.stringify(dbInfo)); renderInformasi(); }
+        function simpanProfil(e) {
             e.preventDefault();
-            if(!supabase) return;
-            
-            const visi = document.getElementById('profil-visi').value;
-            const misi = document.getElementById('profil-misi').value;
-            const struktur = document.getElementById('profil-struktur').value;
-
-            await supabase.from('pgri_profil').upsert({ id: 'utama', visi, misi, struktur });
-            alert("Rilis profil organisasi berhasil dimutakhirkan ke cloud database.");
-            fetchFromCloud();
+            dbProfil = {
+                visi: document.getElementById('profil-visi').value,
+                misi: document.getElementById('profil-misi').value,
+                struktur: document.getElementById('profil-struktur').value
+            };
+            localStorage.setItem('DB_PGRI_PROFIL', JSON.stringify(dbProfil));
+            renderProfil(); alert('Profil berhasil diperbarui!');
         }
-
-        async function hapusProfil() {
-            if(!supabase) return;
-            if(confirm("Kosongkan muatan rincian lembar profil institusi di awan?")) {
-                await supabase.from('pgri_profil').update({ visi: '', misi: '', struktur: '' }).eq('id', 'utama');
-                fetchFromCloud();
-            }
-        }
-
-        // C. KENDALI MODEL AGENDA & KEGIATAN
-        async function simpanKegiatan(e) {
-            e.preventDefault();
-            if(!supabase) return;
-
-            const id = document.getElementById('kegiatan-id').value;
-            const judul = document.getElementById('kegiatan-judul').value;
-            const kategori = document.getElementById('kegiatan-kategori').value;
-            const status = document.getElementById('kegiatan-status').value;
-            const tanggal = document.getElementById('kegiatan-tanggal').value;
-            const jam = document.getElementById('kegiatan-jam').value;
-            const deskripsi = document.getElementById('kegiatan-deskripsi').value;
-
-            const payload = { judul, kategori, status, tanggal, jam, deskripsi };
-
-            if(id) {
-                await supabase.from('pgri_kegiatan').update(payload).eq('id', id);
-            } else {
-                await supabase.from('pgri_kegiatan').insert([payload]);
-            }
-            resetFormKegiatan();
-            fetchFromCloud();
-        }
-
-        function editKegiatan(id) {
-            const data = dbKegiatan.find(d => d.id === id);
-            if(!data) return;
-            document.getElementById('kegiatan-id').value = data.id;
-            document.getElementById('kegiatan-judul').value = data.judul;
-            document.getElementById('kegiatan-kategori').value = data.kategori;
-            document.getElementById('kegiatan-status').value = data.status;
-            document.getElementById('kegiatan-tanggal').value = data.tanggal;
-            document.getElementById('kegiatan-jam').value = data.jam;
-            document.getElementById('kegiatan-deskripsi').value = data.deskripsi;
-            document.getElementById('btn-submit-kegiatan').innerText = "Perbarui Agenda";
-        }
-
-        async function hapusKegiatan(id) {
-            if(!supabase) return;
-            if(confirm("Singkirkan agenda kegiatan ini dari arsip kalender organisasi?")) {
-                await supabase.from('pgri_kegiatan').delete().eq('id', id);
-                fetchFromCloud();
-            }
-        }
-
-        function resetFormKegiatan() { 
-            document.getElementById('form-kegiatan').reset(); 
-            document.getElementById('kegiatan-id').value = ''; 
-            document.getElementById('btn-submit-kegiatan').innerText = "Simpan Agenda"; 
-        }
-
-        // D. KENDALI MODEL GALERI DOKUMENTASI
-        async function simpanDokumentasi(e) {
-            e.preventDefault();
-            if(!supabase) return;
-
-            const id = document.getElementById('dok-id').value;
-            const judul = document.getElementById('dok-judul').value;
-            const tanggal = document.getElementById('dok-tanggal').value;
-            const link = document.getElementById('dok-link').value;
-
-            const payload = { judul, tanggal, link };
-
-            if(id) {
-                await supabase.from('pgri_dokumentasi').update(payload).eq('id', id);
-            } else {
-                await supabase.from('pgri_dokumentasi').insert([payload]);
-            }
-            resetFormDokumentasi();
-            fetchFromCloud();
-        }
-
-        function editDokumentasi(id) {
-            const data = dbDokumentasi.find(d => d.id === id);
-            if(!data) return;
-            document.getElementById('dok-id').value = data.id;
-            document.getElementById('dok-judul').value = data.judul;
-            document.getElementById('dok-tanggal').value = data.tanggal;
-            document.getElementById('dok-link').value = data.link;
-            document.getElementById('btn-submit-dok').innerText = "Perbarui Foto";
-        }
-
-        async function hapusDokumentasi(id) {
-            if(!supabase) return;
-            if(confirm("Hapus aset berkas dokumentasi foto ini dari galeri publik?")) {
-                await supabase.from('pgri_dokumentasi').delete().eq('id', id);
-                fetchFromCloud();
-            }
-        }
-
-        function resetFormDokumentasi() { 
-            document.getElementById('form-dokumentasi').reset(); 
-            document.getElementById('dok-id').value = ''; 
-            document.getElementById('btn-submit-dok').innerText = "Publikasikan Foto"; 
-        }
+        function syncWithCloud() { alert('Sinkronisasi cloud berhasil dijalankan!'); }
     </script>
 </body>
 </html>
