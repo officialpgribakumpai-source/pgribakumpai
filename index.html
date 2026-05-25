@@ -351,14 +351,14 @@
                 <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-md">Masuk Sekarang</button>
             </form>
             <div class="text-center mt-4 text-[11px] text-slate-400">
-                User & Pass: <code class="bg-slate-100 px-1 rounded font-mono text-slate-700 font-bold">admin</code>
+                User & Pass: <code class="bg-slate-100 px-1 rounded font-mono text-slate-700 font-bold">admin / admin123</code>
             </div>
         </div>
     </div>
 
     <script>
-        // Kredensial Admin Default
-        const ADMIN_CREDENTIALS = { user: "admin", pass: "admin" };
+        // Kredensial Admin Diperbarui (Sesuai Permintaan Anda)
+        const ADMIN_CREDENTIALS = { user: "admin", pass: "admin123" };
 
         // Konfigurasi Kredensial Lapisan Data Supabase
         const SUPABASE_URL = "https://aimwgorobxfmzwycgrpn.supabase.co";
@@ -394,7 +394,6 @@
 
         // --- MANAJEMEN PENGAMBILAN DATA AWAN (REALTIME SYNC) ---
         async function fetchFromCloud() {
-            // Pengaman jika pustaka CDN Supabase belum terikat sepenuhnya pada browser
             if (!supabase) {
                 console.warn("Klien database Supabase belum siap, menjadwalkan ulang...");
                 setTimeout(fetchFromCloud, 1000);
